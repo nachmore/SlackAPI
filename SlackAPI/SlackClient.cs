@@ -18,6 +18,7 @@ namespace SlackAPI
     public class SlackClient : SlackClientBase
     {
         private readonly string APIToken;
+        private readonly CookieContainer Cookies;
 
         public Self MySelf;
         public User MyData;
@@ -40,6 +41,11 @@ namespace SlackAPI
         public SlackClient(string token)
         {
             APIToken = token;
+        }
+
+        public SlackClient(string token, CookieContainer cookies)
+        {
+            Cookies = cookies;
         }
 
         public SlackClient(string token, IWebProxy proxySettings)
@@ -108,7 +114,7 @@ namespace SlackAPI
         public void APIRequestWithToken<K>(Action<K> callback, params Tuple<string, string>[] getParameters)
             where K : Response
         {
-            APIRequest(callback, getParameters, new Tuple<string, string>[0], APIToken);
+            APIRequest(callback, getParameters, new Tuple<string, string>[0], APIToken, Cookies);
         }
 
         public void TestAuth(Action<AuthTestResponse> callback)

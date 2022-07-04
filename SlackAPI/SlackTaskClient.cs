@@ -14,6 +14,7 @@ namespace SlackAPI
     public class SlackTaskClient : SlackClientBase
     {
         private readonly string APIToken;
+        private readonly CookieContainer cookieContainer;
 
         public Self MySelf;
         public User MyData;
@@ -36,7 +37,12 @@ namespace SlackAPI
             APIToken = token;
         }
 
-        public SlackTaskClient(string token, IWebProxy proxySettings)
+        public SlackTaskClient(string token, CookieContainer cookies) : this(token)
+        {
+          cookieContainer = cookies;
+        }
+
+    public SlackTaskClient(string token, IWebProxy proxySettings)
             : base(proxySettings)
         {
             APIToken = token;
@@ -91,7 +97,7 @@ namespace SlackAPI
         public Task<K> APIRequestWithTokenAsync<K>(params Tuple<string,string>[] postParameters)
             where K : Response
         {
-            return APIRequestAsync<K>(new Tuple<string, string>[] { }, postParameters, APIToken);
+            return APIRequestAsync<K>(new Tuple<string, string>[] { }, postParameters, APIToken, cookieContainer);
         }
 
         public Task<AuthTestResponse> TestAuthAsync()

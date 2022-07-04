@@ -71,43 +71,63 @@ namespace SlackAPI
             return requestUri;
         }
 
-        protected void APIRequest<K>(Action<K> callback, Tuple<string, string>[] getParameters, Tuple<string, string>[] postParameters, string token = "")
-            where K : Response
+    private HttpWebRequest GetAPIWebRequest<K>(Tuple<string, string>[] getParameters)
+        where K : Response
+    {
+      RequestPath path = RequestPath.GetRequestPath<K>();
+      //TODO: Custom paths? Appropriate subdomain paths? Not sure.
+      //Maybe store custom path in the requestpath.path itself?
+
+      Uri requestUri = GetSlackUri(Path.Combine(APIBaseLocation, path.Path), getParameters);
+      return CreateWebRequest(requestUri);
+    }
+
+    private Tuple<string, string>[] ApplyRequestAuth(HttpWebRequest request, Tuple<string, string>[] postParameters, string token, CookieContainer cookies)
+    {
+      var actualPostParameters = (Tuple<string, string>[])postParameters.Clone();
+
+      // if cookies are specified then the token gets passed in as a parameter, not as part of the header
+      if (cookies != null)
+      {
+        request.CookieContainer = cookies;
+
+        Array.Resize(ref actualPostParameters, actualPostParameters.Length + 1);
+
+        actualPostParameters[actualPostParameters.Length - 1] = new Tuple<string, string>("token", token);
+
+      }
+      else if (!string.IsNullOrEmpty(token))
+      {
+        request.Headers.Add("Authorization", "Bearer " + token);
+      }
+
+      return actualPostParameters;
+    }
+
+    protected void APIRequest<K>(Action<K> callback, Tuple<string, string>[] getParameters, Tuple<string, string>[] postParameters, string token = "", CookieContainer cookies = null)
+        where K : Response
         {
-            RequestPath path = RequestPath.GetRequestPath<K>();
-            //TODO: Custom paths? Appropriate subdomain paths? Not sure.
-            //Maybe store custom path in the requestpath.path itself?
 
-            Uri requestUri = GetSlackUri(Path.Combine(APIBaseLocation, path.Path), getParameters);
-            HttpWebRequest request = CreateWebRequest(requestUri);
-
-            if (!string.IsNullOrEmpty(token))
-                request.Headers.Add("Authorization", "Bearer " + token);
+            var request = GetAPIWebRequest<K>(getParameters);
+            var actualPostParameters = ApplyRequestAuth(request, postParameters, token, cookies);
 
             //This will handle all of the processing.
-            RequestState<K> state = new RequestState<K>(request, postParameters, callback);
+            RequestState<K> state = new RequestState<K>(request, actualPostParameters, callback);
             state.Begin();
         }
 
-        public Task<K> APIRequestAsync<K>(Tuple<string, string>[] getParameters, Tuple<string, string>[] postParameters, string token = "")
+        public Task<K> APIRequestAsync<K>(Tuple<string, string>[] getParameters, Tuple<string, string>[] postParameters, string token = "", CookieContainer cookies = null)
             where K : Response
         {
-            RequestPath path = RequestPath.GetRequestPath<K>();
-            //TODO: Custom paths? Appropriate subdomain paths? Not sure.
-            //Maybe store custom path in the requestpath.path itself?
-
-            Uri requestUri = GetSlackUri(Path.Combine(APIBaseLocation, path.Path), getParameters);
-            HttpWebRequest request = CreateWebRequest(requestUri);
-
-            if (!string.IsNullOrEmpty(token))
-                request.Headers.Add("Authorization", "Bearer " + token);
+            var request = GetAPIWebRequest<K>(getParameters);
+            var actualPostParameters = ApplyRequestAuth(request, postParameters, token, cookies);
 
             //This will handle all of the processing.
-            var state = new RequestStateForTask<K>(request, postParameters);
+            var state = new RequestStateForTask<K>(request, actualPostParameters);
             return state.Execute();
         }
 
-        protected void APIGetRequest<K>(Action<K> callback, params Tuple<string, string>[] getParameters)
+    protected void APIGetRequest<K>(Action<K> callback, params Tuple<string, string>[] getParameters)
             where K : Response
         {
             APIRequest<K>(callback, getParameters, new Tuple<string, string>[0]);
