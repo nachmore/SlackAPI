@@ -28,6 +28,7 @@ namespace SlackAPI
         }
 
         public ResponseMetaData response_metadata;
+        public string RawResponse;
     }
 
     public class ResponseMetaData

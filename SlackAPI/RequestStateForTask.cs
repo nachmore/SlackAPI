@@ -58,6 +58,7 @@ namespace SlackAPI
                 {
                     string responseData = reader.ReadToEnd();
                     responseObj = responseData.Deserialize<K>();
+                    responseObj.RawResponse = responseData;
                 }
             }
 
