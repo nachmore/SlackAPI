@@ -105,9 +105,24 @@ namespace SlackAPI
             return APIRequestWithTokenAsync<AuthTestResponse>();
         }
 
-        public Task<UserListResponse> GetUserListAsync()
+        public Task<UserListResponse> GetUserListAsync(int limit = 0, bool include_locale = false, string cursor = null, string team_id = null)
         {
-            return APIRequestWithTokenAsync<UserListResponse>();
+            if (limit < 0)
+            {
+                throw new ArgumentException(nameof(limit));
+            }
+            var args = new List<Tuple<string, string>>();
+            args.Add(new Tuple<string, string>("limit", limit.ToString()));
+            args.Add(new Tuple<string, string>("include_locale", include_locale.ToString()));
+            if (cursor != null)
+            {
+                args.Add(new Tuple<string, string>("cursor", cursor));
+            }
+            if (team_id != null)
+            {
+                args.Add(new Tuple<string, string>("team_id", team_id));
+            }
+            return APIRequestWithTokenAsync<UserListResponse>(args.ToArray());
         }
 
         public Task<UserEmailLookupResponse> GetUserByEmailAsync(string email)
@@ -143,6 +158,20 @@ namespace SlackAPI
 		        parameters.Add(new Tuple<string, string>("cursor", cursor));
 
 	        return APIRequestWithTokenAsync<ConversationsListResponse>(parameters.ToArray());
+        }
+        
+        public Task<ConversationsMembersResponse> GetConversationsMembersAsync(string channelId, string cursor = "", int limit = 100)
+        {
+            List<Tuple<string, string>> parameters = new List<Tuple<string, string>>
+            {
+                new Tuple<string, string>("channel", channelId)
+            };
+            if (limit > 0)
+                parameters.Add(Tuple.Create("limit", limit.ToString()));
+            if (!string.IsNullOrEmpty(cursor))
+                parameters.Add(new Tuple<string, string>("cursor", cursor));
+
+            return APIRequestWithTokenAsync<ConversationsMembersResponse>(parameters.ToArray());
         }
 
         public Task<ChannelListResponse> GetChannelListAsync(bool ExcludeArchived = true)
@@ -391,6 +420,11 @@ namespace SlackAPI
             return APIRequestWithTokenAsync<ConversationsInviteResponse>(parameters.ToArray());
         }
 
+        public Task<ConversationsJoinResponse> ConversationsJoinAsync(string channelId)
+        {
+            return APIRequestWithTokenAsync<ConversationsJoinResponse>(new Tuple<string, string>("channel", channelId));
+        }
+
         public Task<ConversationsKickResponse> ConversationsKickAsync(string channelId, string userId)
         {
             List<Tuple<string, string>> parameters = new List<Tuple<string, string>>();
@@ -584,7 +618,7 @@ namespace SlackAPI
             string parse = null,
             bool linkNames = false,
             Attachment[] attachments = null,
-            bool as_user = false,
+            bool? as_user = null,
             IBlock[] blocks = null)
         {
             List<Tuple<string, string>> parameters = new List<Tuple<string, string>>();
@@ -605,7 +639,8 @@ namespace SlackAPI
             if (attachments != null && attachments.Length > 0)
                 parameters.Add(new Tuple<string, string>("attachments", JsonConvert.SerializeObject(attachments)));
 
-            parameters.Add(new Tuple<string, string>("as_user", as_user.ToString()));
+            if (as_user.HasValue)
+                parameters.Add(new Tuple<string, string>("as_user", as_user.ToString()));
 
             if (blocks != null && blocks.Length > 0)
                 parameters.Add(new Tuple<string, string>("blocks", JsonConvert.SerializeObject(blocks,
@@ -634,7 +669,7 @@ namespace SlackAPI
             bool? unfurl_links = null,
             string icon_url = null,
             string icon_emoji = null,
-            bool as_user = false,
+            bool? as_user = null,
             string thread_ts = null)
         {
             List<Tuple<string,string>> parameters = new List<Tuple<string,string>>();
@@ -674,8 +709,8 @@ namespace SlackAPI
             if (!string.IsNullOrEmpty(icon_emoji))
                 parameters.Add(new Tuple<string, string>("icon_emoji", icon_emoji));
 
-            if (as_user)
-                parameters.Add(new Tuple<string, string>("as_user", true.ToString()));
+            if (as_user.HasValue)
+                parameters.Add(new Tuple<string, string>("as_user", as_user.ToString()));
 
             if (!string.IsNullOrEmpty(thread_ts))
                 parameters.Add(new Tuple<string, string>("thread_ts", thread_ts));
@@ -738,7 +773,7 @@ namespace SlackAPI
 
             parameters.Add(new Tuple<string, string>("channel", channelId));
             parameters.Add(new Tuple<string, string>("text", text));
-            parameters.Add(new Tuple<string, string>("post_at", (post_at - new DateTime(1970, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc)).TotalSeconds.ToString()));
+            parameters.Add(new Tuple<string, string>("post_at", Convert.ToUInt64((post_at - new DateTime(1970, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc)).TotalSeconds).ToString()));
 
             if (!string.IsNullOrEmpty(botName))
                 parameters.Add(new Tuple<string, string>("username", botName));
